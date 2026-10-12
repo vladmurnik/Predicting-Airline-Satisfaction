@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Data (все CSV — большие, не в git; клади свои в data/raw/)
+data/
+
+# Outputs и submission
+outputs/
+submissions/
+
+# Старый research-код (лежит только локально)
+research_archive/
+
+# MLflow / CatBoost / MLSpec
+mlruns/
+mlflow.db
+catboost_info/
+mlspec/
+
+# OpenCode
+.opencode/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Models
+*.model
+*.bin
+*.pkl
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Distribution
+dist/
+build/
+*.egg-info/
