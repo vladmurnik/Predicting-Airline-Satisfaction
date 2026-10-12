@@ -10,22 +10,28 @@
 ## Быстрый старт
 
 ```bash
-# зависимости (venv уже есть в проекте)
-.venv/Scripts/python.exe -m pip install -r requirements.txt
+# 1) зависимости (создай venv и активируй его, если ещё нет)
+python -m venv .venv
+# Windows:      .venv\Scripts\activate
+# Linux / macOS: source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2) положи данные в data/raw/: train.csv, test.csv, sample_submission.csv
 
 # обучение: печатает OOF AUC по фолдам и пишет submissions/submission.csv
-.venv/Scripts/python.exe train.py
+python train.py
 
-# быстрый smoke-тест вместо полного обучения
-.venv/Scripts/python.exe train.py --model xgb --sample-train 20000 --n-estimators 200
+# быстрый smoke-тест (в отдельную папку, чтобы не затереть настоящий submission)
+python train.py --model xgb --sample-train 20000 --n-estimators 200 --submissions-dir submissions/smoke
 
 # тесты data-слоя
-.venv/Scripts/python.exe -m pytest
+python -m pytest
 ```
 
-Нужны файлы `data/raw/train.csv`, `data/raw/test.csv`, `data/raw/sample_submission.csv`.
-Флаги: `--model {xgb,lgb,blend}` (по умолчанию `blend`), `--folds`, `--seed`,
-`--n-estimators`, `--sample-train N` (подробнее — `train.py --help`).
+В этом репозитории уже есть Windows-окружение `.venv/` (в git не входит) — вместо
+`python` можно писать `.venv/Scripts/python.exe`. Флаги: `--model {xgb,lgb,blend}`
+(по умолчанию `blend`), `--folds`, `--seed`, `--n-estimators`, `--sample-train N`,
+`--submissions-dir`, `--outdir` (подробнее — `train.py --help`).
 
 ## Структура
 
@@ -38,6 +44,7 @@
 ├── tests/
 │   └── test_data.py    # тесты data-слоя
 ├── data/raw/           # train.csv / test.csv / sample_submission.csv (не в git)
+├── pyproject.toml      # конфиг pytest
 ├── requirements.txt
 └── README.md
 ```
@@ -50,9 +57,9 @@
 | LightGBM | 0.9587 |
 | **Blend (XGB + LGB, среднее)** | **0.9588** |
 
-Research-ансамбль (blend_05 — 146 OOF, перебор seed'ов и весов) доходил до **0.96186**,
-но он убран ради простоты: ради +0.003 AUC — сотни файлов и часы расчётов.
-Старое лежит в `research_archive/` и в работе не участвует.
+Research-ансамбль (blend_05 — 146 OOF, перебор seed'ов и весов) доходил до **0.96186
+на лидерборде** (OOF 0.9622), но он убран ради простоты: ради +0.003 AUC — сотни
+файлов и часы расчётов. Старое лежит в `research_archive/` и в работе не участвует.
 
 ## Формат submission
 

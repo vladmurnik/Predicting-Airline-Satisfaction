@@ -51,12 +51,16 @@ def test_encode_gives_same_columns_for_train_and_test():
 
 def test_build_datasets_no_nan_and_aligned_columns():
     """Реальные данные: нет NaN, train и test имеют одинаковые фичи."""
+    import pytest
+
     root = Path(__file__).resolve().parents[1]
     paths = {
         "train": root / "data" / "raw" / "train.csv",
         "test": root / "data" / "raw" / "test.csv",
         "sample_submission": root / "data" / "raw" / "sample_submission.csv",
     }
+    if not paths["train"].exists():
+        pytest.skip("нет data/raw/train.csv — положи данные, чтобы пройти этот тест")
     X, y, X_test, test_ids, sub = build_datasets(paths)
 
     assert X.shape[1] == X_test.shape[1]

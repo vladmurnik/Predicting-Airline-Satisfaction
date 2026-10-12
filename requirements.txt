@@ -3,5 +3,4 @@ pandas
 scikit-learn
 xgboost
 lightgbm
-
-# для тестов: pip install pytest
+pytest  # для тестов
