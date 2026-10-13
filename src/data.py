@@ -1,4 +1,4 @@
-"""Данные: загрузка, чистка, простые фичи, encode и стратифицированные фолды."""
+"""Данные: загрузка, чистка, фичи, encode, инференс и стратифицированные фолды."""
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -50,14 +50,35 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _dummies(df: pd.DataFrame) -> pd.DataFrame:
+    """One-hot категориальных колонок — все get_dummies собраны в одном месте."""
+    return pd.get_dummies(df, columns=CAT_COLS, drop_first=False)
+
+
 def encode(train: pd.DataFrame, test: pd.DataFrame):
     # Склейка train+test перед get_dummies даёт одинаковые колонки у обоих
     full = pd.concat([train.drop(columns=[TARGET]), test], axis=0, ignore_index=True)
-    full = pd.get_dummies(full, columns=CAT_COLS, drop_first=False)
+    full = _dummies(full)
     n = len(train)
     X = full.iloc[:n].reset_index(drop=True)
     X_test = full.iloc[n:].reset_index(drop=True)
     return X, X_test
+
+
+def transform_for_inference(raw_df: pd.DataFrame, feature_columns: list):
+    """Готовит новый csv к предсказанию моделью, обученной на train.
+
+    Возвращает (X_new, ids): колонки строго как при обучении, в том же порядке.
+    """
+    ids = raw_df[ID]
+    df = add_features(clean(raw_df))
+    df = df.drop(columns=[TARGET], errors="ignore")  # если в csv есть target — убираем
+    df = _dummies(df)
+    df = df.drop(columns=[ID], errors="ignore")
+    # ЯДРО надёжности: reindex выравнивает колонки под обучение —
+    # лишние отбрасываются, недостающие заполняются нулями
+    df = df.reindex(columns=feature_columns, fill_value=0)
+    return df.astype(np.float32), ids
 
 
 def build_datasets(paths: dict):

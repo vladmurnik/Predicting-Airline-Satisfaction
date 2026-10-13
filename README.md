@@ -32,19 +32,37 @@ python -m pytest
 В командах ниже `python` — интерпретатор твоего окружения
 (`.venv/Scripts/python.exe` на Windows). Флаги: `--model {xgb,lgb,blend}`
 (по умолчанию `blend`), `--folds`, `--seed`, `--n-estimators`, `--sample-train N`,
-`--submissions-dir`, `--outdir` (подробнее — `train.py --help`).
+`--submissions-dir`, `--outdir`, `--save-model`, `--model-dir` (подробнее — `train.py --help`).
+
+## Инференс
+
+Чтобы предсказывать сохранёнными моделями (без переобучения):
+
+```bash
+# 1) обучить и сохранить финальные модели в outputs/model/
+python train.py --save-model
+
+# 2) предсказать из любого csv с теми же колонками и записать submission
+python predict.py
+```
+
+`predict.py --input путь/к/файлу.csv` принимает любой csv с теми же колонками,
+что и `data/raw/test.csv` (колонка `satisfaction` не нужна). По умолчанию читает
+`data/raw/test.csv` и пишет `submissions/submission.csv`.
 
 ## Структура
 
 ```
 .
-├── train.py            # точка входа: CV + OOF AUC + submission
+├── train.py            # точка входа: CV + OOF AUC + submission (+ --save-model)
+├── predict.py          # инференс сохранёнными моделями из outputs/model/
 ├── src/
-│   ├── data.py         # загрузка, чистка, фичи, encode, фолды
-│   └── model.py        # XGBoost/LightGBM, cv_predict (early stopping)
+│   ├── data.py         # загрузка, чистка, фичи, encode, инференс-трансформ, фолды
+│   └── model.py        # XGBoost/LightGBM, cv_predict, fit_final (early stopping)
 ├── tests/
 │   └── test_data.py    # тесты data-слоя
 ├── data/raw/           # train.csv / test.csv / sample_submission.csv (не в git)
+├── outputs/model/      # финальные модели *.joblib + feature_columns.json (не в git)
 ├── pyproject.toml      # конфиг pytest
 ├── requirements.txt
 ├── LICENSE             # MIT-лицензия

@@ -3,12 +3,14 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from src.data import CAT_COLS, SERVICE_COLS, TARGET, add_features, build_datasets, encode
+from src.data import (CAT_COLS, SERVICE_COLS, TARGET, add_features,
+                      build_datasets, encode, transform_for_inference)
 
 
 def make_raw(n: int = 6, seed: int = 0) -> pd.DataFrame:
-    """Маленький synthetic-датфейм со всеми колонками, которые нужные add_features."""
+    """Маленький synthetic-датасет со всеми колонками, которые нужны add_features."""
     rng = np.random.default_rng(seed)
     df = pd.DataFrame({c: rng.integers(0, 6, n) for c in SERVICE_COLS})
     df["Age"] = rng.integers(18, 80, n)
@@ -19,6 +21,7 @@ def make_raw(n: int = 6, seed: int = 0) -> pd.DataFrame:
     df["Customer Type"] = rng.choice(["Loyal Customer", "disloyal Customer"], n)
     df["Type of Travel"] = rng.choice(["Business travel", "Personal travel"], n)
     df["Class"] = rng.choice(["Business", "Eco", "Eco Plus"], n)
+    df["id"] = np.arange(n)  # колонка id есть и в test.csv
     return df
 
 
@@ -49,10 +52,43 @@ def test_encode_gives_same_columns_for_train_and_test():
     assert not any(c in X.columns for c in CAT_COLS)
 
 
+def test_transform_for_inference_matches_encode():
+    """transform_for_inference(test) даёт те же колонки (и порядок), что encode на train."""
+    train = make_raw()
+    train[TARGET] = [0, 1, 0, 1, 0, 1]
+    test_raw = make_raw(seed=1)
+
+    X, _ = encode(train, test_raw)
+    ref_cols = [c for c in X.columns if c != "id"]  # как в build_datasets
+
+    X_new, ids = transform_for_inference(test_raw, ref_cols)
+
+    assert list(X_new.columns) == ref_cols
+    assert len(X_new) == len(test_raw) and len(ids) == len(test_raw)
+    assert not X_new.isna().any().any()
+    assert "id" not in X_new.columns
+
+
+def test_transform_for_inference_unknown_category():
+    """Неизвестная категория («Space») не ломает инференс: её dummy-колонки = 0."""
+    train = make_raw()
+    train[TARGET] = [0, 1, 0, 1, 0, 1]
+    test_raw = make_raw(seed=1)
+    X, _ = encode(train, test_raw)
+    ref_cols = [c for c in X.columns if c != "id"]
+
+    # подменяем категорию на выдуманную — при обучении её не было
+    test_raw.loc[0, "Class"] = "Space"
+
+    X_new, _ = transform_for_inference(test_raw, ref_cols)
+
+    assert list(X_new.columns) == ref_cols  # не упал и колонки сходятся
+    class_dummies = [c for c in ref_cols if c.startswith("Class_")]
+    assert (X_new.loc[0, class_dummies] == 0).all()  # строка с "Space" не попала ни в одну dummy
+
+
 def test_build_datasets_no_nan_and_aligned_columns():
     """Реальные данные: нет NaN, train и test имеют одинаковые фичи."""
-    import pytest
-
     root = Path(__file__).resolve().parents[1]
     paths = {
         "train": root / "data" / "raw" / "train.csv",
