@@ -3,5 +3,5 @@ pandas
 scikit-learn
 xgboost
 lightgbm
-joblib  # сохранение моделей
-pytest  # для тестов
+joblib  # saving models / сохранение моделей
+pytest  # for tests / для тестов

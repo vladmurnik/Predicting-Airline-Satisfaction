@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""Инференс: загружает сохранённые модели и пишет submission из любого csv с теми же колонками."""
+"""Inference: loads saved models and writes a submission from any csv with the same columns.
+Инференс: загружает сохранённые модели и пишет submission из любого csv с теми же колонками."""
 import argparse
 import json
 import sys
@@ -14,13 +15,14 @@ ROOT = Path(__file__).resolve().parent
 
 
 def die(msg: str) -> None:
-    """Печатает ошибку и выходит (без traceback)."""
+    """Prints an error and exits (no traceback).
+    Печатает ошибку и выходит (без traceback)."""
     print(f"ОШИБКА: {msg}")
     sys.exit(1)
 
 
 def main() -> None:
-    sys.stdout.reconfigure(encoding="utf-8")  # кириллица в выводе не ломается на Windows
+    sys.stdout.reconfigure(encoding="utf-8")  # cyrillic output doesn't break on Windows / кириллица в выводе не ломается на Windows
     parser = argparse.ArgumentParser(description="Предсказание сохранёнными моделями (после train.py --save-model)")
     parser.add_argument("--model-dir", type=Path, default=ROOT / "outputs" / "model",
                         help="папка с model_*.joblib и feature_columns.json")
@@ -30,7 +32,7 @@ def main() -> None:
                         help="куда записать submission.csv")
     args = parser.parse_args()
 
-    # проверяем, что модели вообще сохранялись
+    # check that models were actually saved / проверяем, что модели вообще сохранялись
     if not args.model_dir.is_dir():
         die(f"нет папки {args.model_dir} — сначала запусти python train.py --save-model")
     cols_path = args.model_dir / "feature_columns.json"
@@ -47,7 +49,7 @@ def main() -> None:
     X, ids = transform_for_inference(pd.read_csv(args.input), feature_columns)
 
     preds = [joblib.load(path).predict_proba(X)[:, 1] for path in model_paths]
-    pred = sum(preds) / len(preds)  # среднее по моделям (blend)
+    pred = sum(preds) / len(preds)  # mean over models (blend) / среднее по моделям (blend)
     assert pred.min() >= 0.0 and pred.max() <= 1.0, "pred вне [0,1] — что-то пошло не так"
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

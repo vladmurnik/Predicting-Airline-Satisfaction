@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""Точка входа: данные -> 5-fold CV -> OOF AUC -> submissions/submission.csv."""
+"""Entry point: data -> 5-fold CV -> OOF AUC -> submissions/submission.csv.
+Точка входа: данные -> 5-fold CV -> OOF AUC -> submissions/submission.csv."""
 import argparse
 import json
 import sys
@@ -39,7 +40,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def subsample(X, y, n, seed):
-    """Берёт n случайных строк train, если задан --sample-train."""
+    """Takes n random train rows, if --sample-train is set.
+    Берёт n случайных строк train, если задан --sample-train."""
     if n is None or n >= len(X):
         return X, y
     idx = np.random.default_rng(seed).permutation(len(X))[:n]
@@ -47,13 +49,14 @@ def subsample(X, y, n, seed):
 
 
 def save_submission(pred, test_ids, path):
-    """Проверяет, что pred — вероятности, и пишет id,satisfaction."""
+    """Checks that pred is probabilities, and writes id,satisfaction.
+    Проверяет, что pred — вероятности, и пишет id,satisfaction."""
     assert pred.min() >= 0.0 and pred.max() <= 1.0, "satisfaction должна быть вероятностью в [0,1]"
     pd.DataFrame({"id": test_ids, "satisfaction": pred}).to_csv(path, index=False)
 
 
 def main() -> None:
-    sys.stdout.reconfigure(encoding="utf-8")  # кириллица в выводе не ломается на Windows
+    sys.stdout.reconfigure(encoding="utf-8")  # cyrillic output doesn't break on Windows / кириллица в выводе не ломается на Windows
     args = parse_args()
 
     paths = {
@@ -65,7 +68,7 @@ def main() -> None:
     X, y = subsample(X, y, args.sample_train, args.seed)
     print(f"train {X.shape} | test {X_test.shape} | model={args.model} folds={args.folds} seed={args.seed}")
 
-    # учим нужные модели и запоминаем их результаты
+    # train the needed models and remember their results / учим нужные модели и запоминаем их результаты
     results = {}
     for name in (["xgb", "lgb"] if args.model == "blend" else [args.model]):
         print(f"\n== {name} ==")
@@ -92,17 +95,17 @@ def main() -> None:
     sub_path = args.submissions_dir / "submission.csv"
     save_submission(pred, test_ids, sub_path)
 
-    # финальные модели на всём train — их загружает predict.py
+    # final models on the whole train — predict.py loads them / финальные модели на всём train — их загружает predict.py
     if args.save_model:
         args.model_dir.mkdir(parents=True, exist_ok=True)
         print(f"\nСохраняю финальные модели в {args.model_dir}")
         for name, res in results.items():
-            # число деревьев = медиана итераций по фолдам ЭТОЙ модели
+            # trees = median iterations over folds of THIS model / число деревьев = медиана итераций по фолдам ЭТОЙ модели
             n_final = int(np.median(res["iters"]))
             print(f"  {name}: дообучаю на {n_final} деревьях (итерации по фолдам: {res['iters']})")
             model = fit_final(name, X, y, args.seed, n_final)
             joblib.dump(model, args.model_dir / f"model_{name}.joblib")
-        # список колонок, по которым обучались модели — predict.py строит вход по нему
+        # feature columns the models were trained on — predict.py builds input from this / список колонок, по которым обучались модели — predict.py строит вход по нему
         with open(args.model_dir / "feature_columns.json", "w") as f:
             json.dump({"columns": list(X.columns)}, f)
         if args.sample_train:

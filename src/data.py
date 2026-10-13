@@ -1,4 +1,5 @@
-"""Данные: загрузка, чистка, фичи, encode, инференс и стратифицированные фолды."""
+"""Data: loading, cleaning, features, encode, inference and stratified folds.
+Данные: загрузка, чистка, фичи, encode, инференс и стратифицированные фолды."""
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
@@ -51,12 +52,13 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _dummies(df: pd.DataFrame) -> pd.DataFrame:
-    """One-hot категориальных колонок — все get_dummies собраны в одном месте."""
+    """One-hot of categorical columns — all get_dummies gathered in one place.
+    One-hot категориальных колонок — все get_dummies собраны в одном месте."""
     return pd.get_dummies(df, columns=CAT_COLS, drop_first=False)
 
 
 def encode(train: pd.DataFrame, test: pd.DataFrame):
-    # Склейка train+test перед get_dummies даёт одинаковые колонки у обоих
+    # Concat train+test before get_dummies so both get the same columns / Склейка train+test перед get_dummies даёт одинаковые колонки у обоих
     full = pd.concat([train.drop(columns=[TARGET]), test], axis=0, ignore_index=True)
     full = _dummies(full)
     n = len(train)
@@ -66,15 +68,19 @@ def encode(train: pd.DataFrame, test: pd.DataFrame):
 
 
 def transform_for_inference(raw_df: pd.DataFrame, feature_columns: list):
-    """Готовит новый csv к предсказанию моделью, обученной на train.
+    """Prepares a new csv for prediction by a model trained on train.
+    Готовит новый csv к предсказанию моделью, обученной на train.
 
+    Returns (X_new, ids): columns exactly as at training, in the same order.
     Возвращает (X_new, ids): колонки строго как при обучении, в том же порядке.
     """
     ids = raw_df[ID]
     df = add_features(clean(raw_df))
-    df = df.drop(columns=[TARGET], errors="ignore")  # если в csv есть target — убираем
+    df = df.drop(columns=[TARGET], errors="ignore")  # drop target if the csv has it / если в csv есть target — убираем
     df = _dummies(df)
     df = df.drop(columns=[ID], errors="ignore")
+    # CORE of reliability: reindex aligns columns to training —
+    # extras are dropped, missing are filled with zeros
     # ЯДРО надёжности: reindex выравнивает колонки под обучение —
     # лишние отбрасываются, недостающие заполняются нулями
     df = df.reindex(columns=feature_columns, fill_value=0)

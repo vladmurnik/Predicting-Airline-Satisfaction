@@ -1,4 +1,5 @@
-"""Модели: XGBoost и LightGBM, CV-предсказания и финальное дообучение."""
+"""Models: XGBoost and LightGBM, CV-predictions and final refit.
+Модели: XGBoost и LightGBM, CV-предсказания и финальное дообучение."""
 import numpy as np
 from lightgbm import LGBMClassifier, early_stopping as lgb_early_stopping
 from sklearn.metrics import roc_auc_score
@@ -8,6 +9,8 @@ from src.data import cv_folds
 
 EARLY_STOPPING_ROUNDS = 100
 
+# Hyperparameters are fixed. n_estimators is intentionally large:
+# early stopping will halt training as soon as AUC on the val fold stops growing.
 # Гиперпараметры зафиксированы. n_estimators намеренно большой:
 # ранняя остановка оборвёт обучение, как только AUC на val-фолде не растёт.
 XGB_PARAMS = {
@@ -37,7 +40,8 @@ LGB_PARAMS = {
 
 
 def make_model(model_name: str, seed: int, n_estimators=None):
-    """Новая модель с гиперпараметрами из XGB_PARAMS / LGB_PARAMS."""
+    """New model with hyperparameters from XGB_PARAMS / LGB_PARAMS.
+    Новая модель с гиперпараметрами из XGB_PARAMS / LGB_PARAMS."""
     if model_name == "xgb":
         model_cls, params = XGBClassifier, XGB_PARAMS
     elif model_name == "lgb":
@@ -52,7 +56,8 @@ def make_model(model_name: str, seed: int, n_estimators=None):
 
 
 def fit_fold(model_name, X_tr, y_tr, X_va, y_va, seed, n_estimators=None):
-    """Фитит модель на train-части фолда, early stopping на val-части."""
+    """Fits the model on the train part of the fold, early stopping on the val part.
+    Фитит модель на train-части фолда, early stopping на val-части."""
     model = make_model(model_name, seed, n_estimators)
     if model_name == "xgb":
         model.fit(X_tr, y_tr, eval_set=[(X_va, y_va)], verbose=False)
@@ -63,10 +68,13 @@ def fit_fold(model_name, X_tr, y_tr, X_va, y_va, seed, n_estimators=None):
 
 
 def cv_predict(X, y, X_test, n_splits=5, seed=42, model_name="xgb", n_estimators=None):
-    """Кросс-валидация: возвращает (oof, прогноз на test, OOF AUC, итерации по фолдам).
+    """Cross-validation: returns (oof, test prediction, OOF AUC, iterations per fold).
+    Кросс-валидация: возвращает (oof, прогноз на test, OOF AUC, итерации по фолдам).
 
+    OOF — prediction for each train row from a model that never trained on it.
     OOF — прогноз для каждой строки train от модели, которая на ней не обучалась.
-    iters — на какой итерации остановилась каждая фолд-модель (early stopping).
+    iters — the iteration each fold model stopped at (early stopping).
+    iters — итерация, на которой остановилась каждая фолд-модель (early stopping).
     """
     oof = np.zeros(len(X))
     test_preds = np.zeros(len(X_test))
@@ -75,10 +83,10 @@ def cv_predict(X, y, X_test, n_splits=5, seed=42, model_name="xgb", n_estimators
     for fold, (tr, va) in enumerate(cv_folds(y, n_splits, seed), start=1):
         X_tr, X_va = X.iloc[tr], X.iloc[va]
         model = fit_fold(model_name, X_tr, y[tr], X_va, y[va],
-                         seed=seed + fold, n_estimators=n_estimators)  # разный seed на каждый фолд
+                         seed=seed + fold, n_estimators=n_estimators)  # different seed per fold / разный seed на каждый фолд
         oof[va] = model.predict_proba(X_va)[:, 1]
         test_preds += model.predict_proba(X_test)[:, 1] / n_splits
-        # у XGB атрибут best_iteration, у LGB — best_iteration_
+        # XGB has best_iteration, LGB has best_iteration_ / у XGB атрибут best_iteration, у LGB — best_iteration_
         iters.append(getattr(model, "best_iteration", getattr(model, "best_iteration_", None)))
         print(f"  fold {fold}/{n_splits}: AUC = {roc_auc_score(y[va], oof[va]):.5f}")
 
@@ -86,9 +94,10 @@ def cv_predict(X, y, X_test, n_splits=5, seed=42, model_name="xgb", n_estimators
 
 
 def fit_final(model_name, X, y, seed, n_estimators):
-    """Финальная модель на всём train: n_estimators деревьев, без early stopping."""
+    """Final model on the whole train: n_estimators trees, no early stopping.
+    Финальная модель на всём train: n_estimators деревьев, без early stopping."""
     model = make_model(model_name, seed, n_estimators)
-    # без eval_set ранняя остановка не работает — выключаем её
+    # early stopping needs eval_set — disable it / без eval_set ранняя остановка не работает — выключаем её
     model.set_params(early_stopping_rounds=None)
     model.fit(X, y)
     return model
