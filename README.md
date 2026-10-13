@@ -1,4 +1,4 @@
-# airline-satisfaction
+# Predicting Airline Satisfaction
 
 Предсказание удовлетворённости пассажиров авиакомпании — Kaggle
 [Playground Series S6E10](https://www.kaggle.com/competitions/playground-series-s6e10),
